@@ -11,7 +11,7 @@ setuptools.setup(
     description="Un Cliente http para obtener inscripciones en www.sec.cl",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ajendrex/clientesec",
+    url="https://github.com/ajendrex/cliente-sec",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
