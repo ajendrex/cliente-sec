@@ -191,16 +191,20 @@ class ClienteSEC(Session):
             nombre_declarador=self.buscar_en_sopa(sopa, 'Nombre Declarador'),
             rut_declarador=self.buscar_en_sopa(sopa, 'R.U.T. Declarador:'),
         )
-        tabla_adjuntos = sopa.find('table', id='adjuntos').table.table
-        for row in tabla_adjuntos.find_all('tr')[1:]:
-            tds = row.find_all('td')
-            summary.agregar_adjunto(Adjunto(
+        for adjunto in self._obtener_adjuntos(sopa):
+            summary.agregar_adjunto(adjunto)
+        return summary
+
+    def _obtener_adjuntos(self, sopa):
+        tabla_adjuntos = sopa.find('table', id='adjuntos')
+        for td in tabla_adjuntos.find_all(class_='texCelda', scope='row'):
+            tds = td.div.table.find_all('tr')[1].find_all('td')
+            yield Adjunto(
                 nombre_archivo=tds[0].text.strip(),
                 tamano_archivo=tds[1].text.strip(),
                 url=tds[2].a['href'],
                 cliente=self,
-            ))
-        return summary
+            )
 
     def certificados_inscripcion(self, folio):
         params = {
