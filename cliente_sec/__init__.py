@@ -1,9 +1,8 @@
 import re
 from collections import namedtuple
-from datetime import date
+from datetime import date, datetime
 
 from bs4 import BeautifulSoup
-from django.utils.datetime_safe import datetime
 from requests import Session
 
 
@@ -145,32 +144,30 @@ class ClienteSEC(Session):
                 insc.folio, insc.inscripcion, insc.tipo, insc.medio, insc.presentacion, self)
 
     def obtener_inscripciones(self):
-        n_pagina = 0
         params = {
             'accion': 'menu.usuarioDeclarador.declaracionesInscritas',
             'accionEspecifica': 'menu.usuarioDeclarador.declaracionesInscritas.buscar',
-            'pagActual': n_pagina,
+            'pagActual': 0,
             'tipoTramiteINP': '0',
             'folioInscripcionINP': ''
         }
-        pagina = self._get(self.url_inscripciones, params)
-        visitar_siguiente = False
-        for inscripcion in self._obtener_inscripciones_desde_pagina(pagina):
-            visitar_siguiente = True
-            yield inscripcion
+        self._get(self.url_inscripciones, params)  # necesario para activar la paginación
+        params = {
+            'accion': 'menu.usuarioDeclarador.declaracionesInscritas.paginar',
+            'pagActual': 0,
+            'tipoOrden': 'desc',
+            'columnaOrden': '1',
+            'conOrdenEnTitulo': '1',
+        }
+        self._get(self.url_inscripciones, params)  # La primera página no ordena descendientemente
+        visitar_siguiente = True
         while visitar_siguiente:
-            n_pagina += 1
-            params = {
-                'accion': 'menu.usuarioDeclarador.declaracionesInscritas.paginar',
-                'pagActual': str(n_pagina),
-                'tipoOrden': 'asc',
-                'columnaOrden': '-1',
-            }
-            pagina = self._get(self.url_inscripciones, params)
             visitar_siguiente = False
+            pagina = self._get(self.url_inscripciones, params)
             for inscripcion in self._obtener_inscripciones_desde_pagina(pagina):
                 visitar_siguiente = True
                 yield inscripcion
+            params['pagActual'] += 1
 
     def buscar_en_sopa(self, sopa, etiqueta, tag='td'):
         tag = sopa.find(tag, string=re.compile(etiqueta))
@@ -183,7 +180,6 @@ class ClienteSEC(Session):
             'medio': 'ELECTRÓNICO',
         }
         sopa = self._get(self.url_inscripciones, params)
-
         tfolio, tfec = sopa.find_all(id='table2')
         fecha_inscripcion = tfec.tr.find_all('td')[1].text.strip()
         summary = ResumenInscripcion(
